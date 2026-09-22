@@ -301,6 +301,15 @@ def compute_totals(date_from, date_to, user_filter=None):
     }
 
 
+# ============ خدمة الملفات الثابتة (Vercel) ============
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    """Vercel: نخدم الملفات الثابتة يدوياً"""
+    from flask import send_from_directory
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    return send_from_directory(static_dir, filename)
+
+
 # ============ الصفحة الرئيسية ============
 @app.route("/")
 def index():
