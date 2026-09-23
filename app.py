@@ -20,12 +20,14 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
 # اكتشاف البيئة: PostgreSQL على Vercel، SQLite محلياً
 DATABASE_URL = (
-    os.environ.get("POSTGRES_URL")
+    os.environ.get("DATABASE_URL_POOLED")   # ✅ الأولوية للـ Pooler
+    or os.environ.get("POSTGRES_URL")
     or os.environ.get("DATABASE_URL")
     or os.environ.get("STORAGE_URL")
     or os.environ.get("DATABASE_URL_UNPOOLED")
     or os.environ.get("POSTGRES_URL_NON_POOLING")
 )
+
 USE_POSTGRES = bool(DATABASE_URL)
 
 if USE_POSTGRES:
