@@ -859,6 +859,36 @@ def api_users():
                            (generate_password_hash(newpass), uid))
                 db.commit()
                 return jsonify({"ok": True})
+
+        elif action == "delete":
+            uid = int(data.get("user_id"))
+
+            # ❌ لا يمكن حذف نفسك
+            if uid == request.user["id"]:
+                return jsonify({"ok": False, "error": "لا يمكنك حذف حسابك الحالي"}), 400
+
+            # ❌ لا يمكن حذف آخر مدير نشط
+            row = db.execute("SELECT role FROM users WHERE id=?", (uid,)).fetchone()
+            if not row:
+                return jsonify({"ok": False, "error": "المستخدم غير موجود"}), 404
+
+            if row["role"] == "manager":
+                mgrs = db.execute(
+                    "SELECT COUNT(*) AS v FROM users WHERE role='manager' AND active=1 AND id<>?",
+                    (uid,)).fetchone()
+                if mgrs["v"] == 0:
+                    return jsonify({"ok": False, "error": "لا يمكن حذف آخر مدير في النظام"}), 400
+
+            # ✅ احذف كل بياناته أولاً (اختياري - لمنع تعليق السجلات)
+            # اترك بيانات الفواتير والمصروفات (نحتاجها للتقارير التاريخية)
+            # فقط احذف التوكنات المرتبطة
+
+            db.execute("DELETE FROM tokens WHERE user_id=?", (uid,))
+            db.execute("DELETE FROM users WHERE id=?", (uid,))
+            db.commit()
+            log_action(request.user["id"], "delete_user", f"حذف المستخدم #{uid}")
+            return jsonify({"ok": True})
+
         return jsonify({"ok": False, "error": "إجراء غير معروف"}), 400
 
     users = db.execute("SELECT id,username,full_name,role,active,created_at FROM users ORDER BY id").fetchall()

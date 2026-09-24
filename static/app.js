@@ -944,7 +944,9 @@ async function renderUsers(c) {
           <td style="display:flex;gap:5px;flex-wrap:wrap">
             <button class="btn-small" onclick="toggleUser(${u.id})">${u.active ? "تعطيل" : "تفعيل"}</button>
             <button class="btn-small" style="background:#f39c12" onclick="resetPass(${u.id})">تغيير كلمة المرور</button>
+            ${u.id !== CURRENT_USER.id ? `<button class="btn-small" style="background:#e74c3c" onclick="deleteUser(${u.id}, '${(u.full_name || u.username).replace(/'/g, "\\'")}')">🗑️ حذف</button>` : ''}
           </td>
+
         </tr>
       `).join("")}
     </tbody>
@@ -980,6 +982,26 @@ async function resetPass(uid) {
   const res = await api("/api/users", { method: "POST", body: { action: "reset", user_id: uid, new_password: np } });
   if (res.ok) showAlert("✅ تم تغيير كلمة المرور");
 }
+
+
+async function deleteUser(uid, name) {
+  if (!confirm(`⚠️ هل أنت متأكد من حذف المستخدم:\n«${name}»\n\nهذا الإجراء لا يمكن التراجع عنه!`)) {
+    return;
+  }
+  // تأكيد ثانٍ للحماية
+  if (!confirm(`تأكيد أخير:\nسيتم حذف «${name}» نهائياً.\n\nاضغط OK للمتابعة.`)) {
+    return;
+  }
+  const res = await api("/api/users", { method: "POST", body: { action: "delete", user_id: uid } });
+  if (res.ok) {
+    showAlert("✅ تم حذف المستخدم");
+    navigate("users");
+  } else {
+    showAlert(res.error || "خطأ في الحذف", "danger");
+  }
+}
+
+
 
 // ============================================================
 // التشغيل الأولي
