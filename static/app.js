@@ -954,6 +954,26 @@ async function renderUsers(c) {
   listPanel.appendChild(t);
   c.appendChild(listPanel);
 
+
+
+  // قسم منطقة الخطر
+  const dangerPanel = el("div", { class: "panel" });
+  dangerPanel.style.cssText = "border:2px solid #e74c3c;background:#fff5f5";
+  dangerPanel.appendChild(el("h3", { style: "color:#c0392b" }, "⚠️ منطقة الخطر"));
+  dangerPanel.appendChild(el("p", { style: "color:#666;margin-bottom:15px;font-size:14px" },
+    "احذف جميع العمليات (مبيعات + مشتريات + مصروفات + منتجات). لا يمكن التراجع!"));
+
+  const clearBtn = el("button", {
+    class: "btn-small",
+    style: "background:#e74c3c;padding:10px 20px;font-size:14px",
+    onclick: clearAllData
+  }, "🗑️ حذف جميع العمليات");
+  dangerPanel.appendChild(clearBtn);
+  c.appendChild(dangerPanel);
+
+
+
+
   // سجل النشاط
   const logPanel = el("div", { class: "panel" });
   logPanel.appendChild(el("h3", {}, "📋 آخر 20 عملية"));
@@ -1000,6 +1020,31 @@ async function deleteUser(uid, name) {
     showAlert(res.error || "خطأ في الحذف", "danger");
   }
 }
+
+
+
+
+async function clearAllData() {
+  if (!confirm("⚠️ تحذير!\n\nسيتم حذف:\n• جميع فواتير المبيعات\n• جميع فواتير المشتريات\n• جميع المصروفات\n• جميع المنتجات\n• سجل النشاط\n\nلا يمكن التراجع عن هذا الإجراء!")) {
+    return;
+  }
+  const input = prompt('اكتب كلمة "DELETE_ALL" لتأكيد الحذف:');
+  if (input !== "DELETE_ALL") {
+    showAlert("تم إلغاء العملية", "warning");
+    return;
+  }
+  const res = await api("/api/admin/clear-data", {
+    method: "POST",
+    body: { confirm: "DELETE_ALL" }
+  });
+  if (res.ok) {
+    showAlert("✅ تم حذف جميع العمليات بنجاح");
+    navigate("users");
+  } else {
+    showAlert(res.error || "خطأ", "danger");
+  }
+}
+
 
 
 

@@ -819,6 +819,33 @@ def api_print(kind):
     return jsonify({"ok": False, "error": "نوع غير صحيح"}), 400
 
 
+
+
+
+
+@app.route("/api/admin/clear-data", methods=["POST"])
+@token_required
+@manager_required
+def api_clear_data():
+    """حذف جميع العمليات (فواتير + مصروفات + منتجات) - للمدير فقط"""
+    data = request.get_json() or {}
+    if data.get("confirm") != "DELETE_ALL":
+        return jsonify({"ok": False, "error": "تأكيد غير صحيح"}), 400
+
+    db = get_db()
+    db.execute("DELETE FROM invoice_items")
+    db.execute("DELETE FROM invoices")
+    db.execute("DELETE FROM expenses")
+    db.execute("DELETE FROM products")
+    db.execute("DELETE FROM activity_log")
+    db.commit()
+
+    log_action(request.user["id"], "clear_data", "حذف جميع العمليات")
+    return jsonify({"ok": True, "message": "تم حذف جميع العمليات"})
+
+
+
+
 # ============ API: المستخدمون ============
 @app.route("/api/users", methods=["GET", "POST"])
 @token_required
