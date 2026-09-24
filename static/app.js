@@ -54,14 +54,16 @@ async function api(url, options = {}) {
 function showAlert(msg, type = "success") {
   const old = document.querySelector(".toast");
   if (old) old.remove();
-  const t = el("div", { class: `toast alert alert-${type}` }, msg);
+  const t = el("div", { class: `toast alert alert-${type}` });
   t.style.cssText = `
     position:fixed;top:20px;left:50%;transform:translateX(-50%);
-    z-index:9999;min-width:300px;text-align:center;
+    z-index:9999;min-width:320px;max-width:90%;text-align:right;
     box-shadow:0 10px 30px rgba(0,0,0,0.15);
+    white-space:pre-line;line-height:1.6;
   `;
+  t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
+  setTimeout(() => t.remove(), 5000);
 }
 
 // ============ تسجيل الدخول / الخروج ============

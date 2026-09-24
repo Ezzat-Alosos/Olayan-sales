@@ -477,9 +477,46 @@ def api_invoice(itype):
     if not valid:
         return jsonify({"ok": False, "error": "أضف منتجاً واحداً على الأقل"}), 400
 
+    db = get_db()
+
+    # ✅ تحقق خاص بالمبيعات: كل منتج يجب أن يكون متوفراً في المخزون
+    if itype == "sale":
+        errors = []
+        for n, q, p, sub in valid:
+            # إجمالي الكمية المشتراة لهذا المنتج
+            pur = db.execute(
+                "SELECT COALESCE(SUM(ii.quantity),0) AS v FROM invoice_items ii "
+                "JOIN invoices i ON i.id = ii.invoice_id "
+                "WHERE i.type='purchase' AND ii.product_name = ?",
+                (n,)).fetchone()
+            purchased = float(pur["v"]) if pur else 0
+
+            # إجمالي الكمية المباعة سابقاً
+            sold = db.execute(
+                "SELECT COALESCE(SUM(ii.quantity),0) AS v FROM invoice_items ii "
+                "JOIN invoices i ON i.id = ii.invoice_id "
+                "WHERE i.type='sale' AND ii.product_name = ?",
+                (n,)).fetchone()
+            sold_qty = float(sold["v"]) if sold else 0
+
+            available = purchased - sold_qty
+
+            # ❌ المنتج غير موجود في المشتريات
+            if purchased == 0:
+                errors.append(f"❌ «{n}» لم يُشترَ من قبل (غير موجود في المخزون)")
+
+            # ❌ الكمية المطلوبة أكبر من المتوفرة
+            elif q > available:
+                errors.append(f"⚠️ «{n}» المتوفر: {available}، المطلوب: {q}")
+
+        if errors:
+            return jsonify({
+                "ok": False,
+                "error": "لا يمكن إتمام البيع:\n" + "\n".join(errors)
+            }), 400
+
     total = sum(v[3] for v in valid)
     today = date.today().isoformat()
-    db = get_db()
 
     cur = db.execute(
         "INSERT INTO invoices (type,invoice_no,party,date,total,notes,user_id) VALUES (?,?,?,?,?,?,?) RETURNING id"
@@ -495,7 +532,6 @@ def api_invoice(itype):
     for n, q, p, sub in valid:
         db.execute("INSERT INTO invoice_items (invoice_id,product_name,quantity,price,subtotal) VALUES (?,?,?,?,?)",
                    (inv_id, n, q, p, sub))
-        # upsert للمنتج
         existing = db.execute("SELECT id FROM products WHERE name=?", (n,)).fetchone()
         if existing:
             db.execute("UPDATE products SET last_price=? WHERE name=?", (p, n))
